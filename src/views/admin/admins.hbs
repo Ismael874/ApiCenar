@@ -1,0 +1,159 @@
+{{!-- src/views/admin/admins.hbs --}}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-user-shield me-2"></i>Administradores</h2>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#adminModal" onclick="openCreateModal()">
+            <i class="fas fa-plus me-2"></i>Nuevo Admin
+        </button>
+    </div>
+    
+    <div id="adminsContainer">
+        <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+    </div>
+</div>
+
+<div class="modal fade" id="adminModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nuevo Administrador</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="adminForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nombre</label>
+                            <input type="text" class="form-control" id="firstName" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Apellido</label>
+                            <input type="text" class="form-control" id="lastName" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Usuario</label>
+                        <input type="text" class="form-control" id="userName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Teléfono</label>
+                        <input type="tel" class="form-control" id="phone" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Contraseña</label>
+                        <input type="password" class="form-control" id="password" required minlength="6">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveAdmin()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{#section "scripts"}}
+<script>
+const token = localStorage.getItem('token');
+
+async function loadAdmins() {
+    try {
+        const response = await fetch('/api/admin/users/admins', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            displayAdmins(data.data);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function displayAdmins(admins) {
+    const container = document.getElementById('adminsContainer');
+    
+    container.innerHTML = `
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr><th>Nombre</th><th>Usuario</th><th>Email</th><th>Teléfono</th><th>Estado</th><th>Acciones</th></tr>
+                </thead>
+                <tbody>
+                    ${admins.map(a => `
+                        <tr>
+                            <td>${a.firstName} ${a.lastName}</td>
+                            <td>${a.userName}</td>
+                            <td>${a.email}</td>
+                            <td>${a.phone}</td>
+                            <td><span class="badge bg-${a.isActive ? 'success' : 'danger'}">${a.isActive ? 'Activo' : 'Inactivo'}</span></td>
+                            <td>
+                                ${!a.isDefaultAdmin ? `
+                                    <button class="btn btn-sm btn-${a.isActive ? 'warning' : 'success'}" onclick="toggleStatus('${a._id}', ${!a.isActive})">
+                                        ${a.isActive ? 'Inactivar' : 'Activar'}
+                                    </button>
+                                ` : '<span class="badge bg-secondary">Por defecto</span>'}
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+window.openCreateModal = function() {
+    document.getElementById('adminForm').reset();
+};
+
+window.saveAdmin = async function() {
+    const data = {
+        firstName: document.getElementById('firstName').value,
+        lastName: document.getElementById('lastName').value,
+        userName: document.getElementById('userName').value,
+        email: document.getElementById('email').value,
+        phone: document.getElementById('phone').value,
+        password: document.getElementById('password').value
+    };
+    
+    try {
+        const response = await fetch('/api/admin/users/admins', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('adminModal')).hide();
+            loadAdmins();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+};
+
+window.toggleStatus = async function(id, isActive) {
+    try {
+        const response = await fetch(`/api/admin/users/${id}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ isActive })
+        });
+        
+        if (response.ok) {
+            loadAdmins();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+};
+
+loadAdmins();
+</script>
+{{/section}}

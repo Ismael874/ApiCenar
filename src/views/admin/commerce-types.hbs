@@ -1,0 +1,175 @@
+{{!-- src/views/admin/commerce-types.hbs --}}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-tags me-2"></i>Tipos de Comercio</h2>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#typeModal" onclick="openCreateModal()">
+            <i class="fas fa-plus me-2"></i>Nuevo Tipo
+        </button>
+    </div>
+    
+    <div id="typesContainer">
+        <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+    </div>
+</div>
+
+<div class="modal fade" id="typeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Nuevo Tipo de Comercio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="typeForm" enctype="multipart/form-data">
+                    <input type="hidden" id="typeId">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" class="form-control" name="name" id="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <textarea class="form-control" name="description" id="description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Icono</label>
+                        <input type="file" class="form-control" name="icon" id="iconInput" accept="image/*">
+                        <img id="iconPreview" src="" class="mt-2 rounded" style="max-width: 64px; display: none;">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveType()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{#section "scripts"}}
+<script>
+const token = localStorage.getItem('token');
+let types = [];
+let editingId = null;
+
+async function loadTypes() {
+    try {
+        const response = await fetch('/api/commerce-types', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            types = data.data;
+            displayTypes(types);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function displayTypes(types) {
+    const container = document.getElementById('typesContainer');
+    
+    container.innerHTML = `
+        <div class="row g-4">
+            ${types.map(t => `
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body text-center">
+                            <img src="${t.icon}" alt="${t.name}" style="width: 64px; height: 64px; object-fit: contain;" class="mb-3">
+                            <h5>${t.name}</h5>
+                            <p class="small text-muted">${t.description || ''}</p>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary" onclick="openEditModal('${t._id}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteType('${t._id}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+window.openCreateModal = function() {
+    editingId = null;
+    document.getElementById('modalTitle').textContent = 'Nuevo Tipo de Comercio';
+    document.getElementById('typeForm').reset();
+    document.getElementById('typeId').value = '';
+    document.getElementById('iconPreview').style.display = 'none';
+};
+
+window.openEditModal = function(id) {
+    const type = types.find(t => t._id === id);
+    if (!type) return;
+    
+    editingId = id;
+    document.getElementById('modalTitle').textContent = 'Editar Tipo de Comercio';
+    document.getElementById('typeId').value = id;
+    document.getElementById('name').value = type.name;
+    document.getElementById('description').value = type.description || '';
+    
+    if (type.icon) {
+        document.getElementById('iconPreview').src = type.icon;
+        document.getElementById('iconPreview').style.display = 'block';
+    }
+    
+    new bootstrap.Modal(document.getElementById('typeModal')).show();
+};
+
+window.saveType = async function() {
+    const formData = new FormData(document.getElementById('typeForm'));
+    if (!editingId) formData.delete('icon');
+    
+    const method = editingId ? 'PUT' : 'POST';
+    const url = editingId ? `/api/admin/commerce-types/${editingId}` : '/api/admin/commerce-types';
+    
+    try {
+        const response = await fetch(url, {
+            method,
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+        
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('typeModal')).hide();
+            loadTypes();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+};
+
+window.deleteType = async function(id) {
+    if (!confirm('¿Eliminar este tipo de comercio? Se eliminarán todos los comercios asociados.')) return;
+    
+    try {
+        await fetch(`/api/admin/commerce-types/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        loadTypes();
+    } catch (error) {
+        console.error('Error:', error);
+    }
+};
+
+document.getElementById('iconInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            document.getElementById('iconPreview').src = e.target.result;
+            document.getElementById('iconPreview').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+loadTypes();
+</script>
+{{/section}}

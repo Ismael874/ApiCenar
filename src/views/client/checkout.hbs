@@ -1,0 +1,219 @@
+{{!-- src/views/client/checkout.hbs --}}
+<div class="container py-4">
+    <div class="d-flex align-items-center mb-4">
+        <a href="/client/home" class="btn btn-outline-secondary me-3">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <h2 class="mb-0">Finalizar Pedido</h2>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Selecciona una dirección</h5>
+                </div>
+                <div class="card-body">
+                    <div id="addressesContainer">
+                        <div class="text-center py-3">
+                            <div class="spinner-border spinner-border-sm"></div> Cargando direcciones...
+                        </div>
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm mt-3" onclick="window.location.href='/client/addresses'">
+                        <i class="fas fa-plus me-1"></i>Gestionar direcciones
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Resumen del Pedido</h5>
+                </div>
+                <div class="card-body">
+                    <div id="commerceSummary"></div>
+                    <div id="orderItems"></div>
+                    <hr>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <span id="subtotal">RD$ 0.00</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>ITBIS (<span id="itbisPercent">18</span>%):</span>
+                        <span id="itbisAmount">RD$ 0.00</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between mb-3">
+                        <strong>Total:</strong>
+                        <strong class="text-primary" id="total">RD$ 0.00</strong>
+                    </div>
+                    <button class="btn btn-primary w-100 btn-lg" id="placeOrderBtn" disabled>
+                        <i class="fas fa-check me-2"></i>Realizar Pedido
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{#section "scripts"}}
+<script>
+const token = localStorage.getItem('token');
+const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+const commerceId = localStorage.getItem('checkoutCommerceId');
+let selectedAddressId = null;
+let itbisPercent = 18;
+
+async function loadData() {
+    await Promise.all([loadAddresses(), loadCommerceInfo(), loadItbis()]);
+    updateOrderSummary();
+}
+
+async function loadAddresses() {
+    try {
+        const response = await fetch('/api/addresses', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            displayAddresses(data.data);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function displayAddresses(addresses) {
+    const container = document.getElementById('addressesContainer');
+    
+    if (addresses.length === 0) {
+        container.innerHTML = `
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                No tienes direcciones registradas. Agrega una dirección para continuar.
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = addresses.map(addr => `
+        <div class="address-card p-3 mb-2 border rounded ${addr.isDefault ? 'border-primary' : ''}" 
+             style="cursor: pointer;" onclick="selectAddress('${addr._id}')">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <strong>${addr.label}</strong> ${addr.isDefault ? '<span class="badge bg-primary">Predeterminada</span>' : ''}
+                    <p class="mb-0 text-muted">${addr.street}, ${addr.sector}, ${addr.city}</p>
+                    ${addr.reference ? `<small class="text-muted">${addr.reference}</small>` : ''}
+                </div>
+                <i class="fas fa-check-circle text-primary" id="check-${addr._id}" style="display: none;"></i>
+            </div>
+        </div>
+    `).join('');
+}
+
+window.selectAddress = function(addressId) {
+    selectedAddressId = addressId;
+    document.querySelectorAll('.address-card').forEach(card => {
+        card.classList.remove('border-primary', 'bg-light');
+    });
+    document.querySelectorAll('[id^="check-"]').forEach(icon => icon.style.display = 'none');
+    
+    event.currentTarget.classList.add('border-primary', 'bg-light');
+    document.getElementById(`check-${addressId}`).style.display = 'block';
+    document.getElementById('placeOrderBtn').disabled = false;
+};
+
+async function loadCommerceInfo() {
+    try {
+        const response = await fetch(`/api/commerce/${commerceId}/catalog`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('commerceSummary').innerHTML = `
+                <div class="d-flex align-items-center mb-3">
+                    <img src="${data.commerce.logo}" style="width: 40px; height: 40px; object-fit: cover;" class="rounded me-2">
+                    <strong>${data.commerce.name}</strong>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function loadItbis() {
+    try {
+        const response = await fetch('/api/configurations/itbis/current');
+        if (response.ok) {
+            const data = await response.json();
+            itbisPercent = data.itbis;
+            document.getElementById('itbisPercent').textContent = itbisPercent;
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function updateOrderSummary() {
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const itbis = subtotal * (itbisPercent / 100);
+    const total = subtotal + itbis;
+    
+    document.getElementById('orderItems').innerHTML = cart.map(item => `
+        <div class="d-flex justify-content-between small mb-2">
+            <span>${item.quantity}x ${item.name}</span>
+            <span>RD$ ${(item.price * item.quantity).toFixed(2)}</span>
+        </div>
+    `).join('');
+    
+    document.getElementById('subtotal').textContent = `RD$ ${subtotal.toFixed(2)}`;
+    document.getElementById('itbisAmount').textContent = `RD$ ${itbis.toFixed(2)}`;
+    document.getElementById('total').textContent = `RD$ ${total.toFixed(2)}`;
+}
+
+document.getElementById('placeOrderBtn').addEventListener('click', async () => {
+    if (!selectedAddressId) return;
+    
+    const items = cart.map(item => ({
+        productId: item.id,
+        quantity: item.quantity
+    }));
+    
+    const btn = document.getElementById('placeOrderBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Procesando...';
+    
+    try {
+        const response = await fetch('/api/orders', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ addressId: selectedAddressId, items })
+        });
+        
+        if (response.ok) {
+            localStorage.removeItem('cart');
+            localStorage.removeItem('checkoutCommerceId');
+            alert('¡Pedido realizado exitosamente!');
+            window.location.href = '/client/orders';
+        } else {
+            const data = await response.json();
+            alert(data.message || 'Error al crear el pedido');
+        }
+    } catch (error) {
+        alert('Error de conexión');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check me-2"></i>Realizar Pedido';
+    }
+});
+
+loadData();
+</script>
+{{/section}}

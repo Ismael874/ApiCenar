@@ -1,0 +1,129 @@
+{{!-- src/views/auth/register-client.hbs --}}
+<div class="auth-container">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="card shadow-lg border-0 rounded-lg">
+                    <div class="card-header bg-primary text-white text-center py-4">
+                        <h3 class="mb-0"><i class="fas fa-user-plus me-2"></i>Registro de Cliente/Delivery</h3>
+                        <p class="mb-0 mt-2">Crea tu cuenta en ApiCenar</p>
+                    </div>
+                    <div class="card-body p-4">
+                        <form id="registerForm" enctype="multipart/form-data">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Nombre</label>
+                                    <input type="text" class="form-control" name="firstName" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Apellido</label>
+                                    <input type="text" class="form-control" name="lastName" required>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Nombre de Usuario</label>
+                                    <input type="text" class="form-control" name="userName" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Correo Electrónico</label>
+                                    <input type="email" class="form-control" name="email" required>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Teléfono</label>
+                                    <input type="tel" class="form-control" name="phone" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Rol</label>
+                                    <select class="form-select" name="role" required>
+                                        <option value="Client">Cliente</option>
+                                        <option value="Delivery">Delivery</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Contraseña</label>
+                                    <input type="password" class="form-control" name="password" required minlength="6">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Confirmar Contraseña</label>
+                                    <input type="password" class="form-control" name="confirmPassword" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Foto de Perfil</label>
+                                <input type="file" class="form-control" name="profileImage" accept="image/*" required>
+                            </div>
+                            <div id="errorMessage" class="alert alert-danger d-none"></div>
+                            <div id="successMessage" class="alert alert-success d-none"></div>
+                            <button type="submit" class="btn btn-primary w-100 btn-lg" id="submitBtn">
+                                <span class="spinner-border spinner-border-sm d-none" id="spinner"></span>
+                                Registrarse
+                            </button>
+                        </form>
+                        <hr class="my-4">
+                        <div class="text-center">
+                            <p>¿Ya tienes cuenta? <a href="/auth/login">Inicia Sesión</a></p>
+                            <p>¿Eres un comercio? <a href="/auth/register-commerce">Registra tu Comercio</a></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{#section "scripts"}}
+<script>
+document.getElementById('registerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const submitBtn = document.getElementById('submitBtn');
+    const spinner = document.getElementById('spinner');
+    const errorDiv = document.getElementById('errorMessage');
+    const successDiv = document.getElementById('successMessage');
+    
+    const password = form.password.value;
+    const confirmPassword = form.confirmPassword.value;
+    
+    if (password !== confirmPassword) {
+        errorDiv.textContent = 'Las contraseñas no coinciden';
+        errorDiv.classList.remove('d-none');
+        return;
+    }
+    
+    submitBtn.disabled = true;
+    spinner.classList.remove('d-none');
+    errorDiv.classList.add('d-none');
+    successDiv.classList.add('d-none');
+    
+    const formData = new FormData(form);
+    
+    try {
+        const response = await fetch('/api/auth/register-client', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        
+        if (response.ok) {
+            successDiv.textContent = data.message || 'Registro exitoso. Revisa tu correo para activar tu cuenta.';
+            successDiv.classList.remove('d-none');
+            form.reset();
+        } else {
+            errorDiv.textContent = data.message || 'Error en el registro';
+            errorDiv.classList.remove('d-none');
+        }
+    } catch (error) {
+        errorDiv.textContent = 'Error de conexión';
+        errorDiv.classList.remove('d-none');
+    } finally {
+        submitBtn.disabled = false;
+        spinner.classList.add('d-none');
+    }
+});
+</script>
+{{/section}}

@@ -1,0 +1,118 @@
+{{!-- src/views/partials/header.hbs --}}
+{{!-- Header con navegación según rol --}}
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">
+            <i class="fas fa-utensils me-2"></i>ApiCenar
+        </a>
+        
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto align-items-center">
+                {{#if user}}
+                    {{#if (eq user.role "Client")}}
+                        <li class="nav-item">
+                            <a class="nav-link {{#if (eq activePage 'home')}}active{{/if}}" href="/client/home">
+                                <i class="fas fa-home me-1"></i>Home
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/client/orders">
+                                <i class="fas fa-shopping-bag me-1"></i>Mis Pedidos
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/client/addresses">
+                                <i class="fas fa-map-marker-alt me-1"></i>Direcciones
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/client/favorites">
+                                <i class="fas fa-heart me-1"></i>Favoritos
+                            </a>
+                        </li>
+                    {{/if}}
+                    
+                    {{#if (eq user.role "Commerce")}}
+                        <li class="nav-item">
+                            <a class="nav-link" href="/commerce/home">
+                                <i class="fas fa-home me-1"></i>Home
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/commerce/categories">
+                                <i class="fas fa-tags me-1"></i>Categorías
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/commerce/products">
+                                <i class="fas fa-pizza-slice me-1"></i>Productos
+                            </a>
+                        </li>
+                    {{/if}}
+                    
+                    {{#if (eq user.role "Delivery")}}
+                        <li class="nav-item">
+                            <a class="nav-link" href="/delivery/home">
+                                <i class="fas fa-home me-1"></i>Home
+                            </a>
+                        </li>
+                    {{/if}}
+                    
+                    {{#if (eq user.role "Admin")}}
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin/dashboard">
+                                <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-users me-1"></i>Usuarios
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="/admin/clients">Clientes</a></li>
+                                <li><a class="dropdown-item" href="/admin/deliveries">Deliveries</a></li>
+                                <li><a class="dropdown-item" href="/admin/commerces">Comercios</a></li>
+                                <li><a class="dropdown-item" href="/admin/admins">Administradores</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin/configurations">
+                                <i class="fas fa-cog me-1"></i>Configuración
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin/commerce-types">
+                                <i class="fas fa-store me-1"></i>Tipos Comercio
+                            </a>
+                        </li>
+                    {{/if}}
+                    
+                    <li class="nav-item dropdown ms-3">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <img src="{{user.profileImage}}" alt="{{user.firstName}}" class="rounded-circle me-1" style="width: 30px; height: 30px; object-fit: cover;">
+                            {{user.firstName}}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            {{#if (eq user.role "Client")}}
+                                <li><a class="dropdown-item" href="/client/profile"><i class="fas fa-user me-2"></i>Mi Perfil</a></li>
+                            {{/if}}
+                            {{#if (eq user.role "Commerce")}}
+                                <li><a class="dropdown-item" href="/commerce/profile"><i class="fas fa-user me-2"></i>Perfil Comercio</a></li>
+                            {{/if}}
+                            {{#if (eq user.role "Delivery")}}
+                                <li><a class="dropdown-item" href="/delivery/profile"><i class="fas fa-user me-2"></i>Mi Perfil</a></li>
+                            {{/if}}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" id="logoutBtn"><i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
+                        </ul>
+                    </li>
+                {{/if}}
+            </ul>
+        </div>
+    </div>
+</nav>

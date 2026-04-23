@@ -1,0 +1,168 @@
+{{!-- src/views/commerce/categories.hbs --}}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-tags me-2"></i>Categorías</h2>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#categoryModal" onclick="openCreateModal()">
+            <i class="fas fa-plus me-2"></i>Nueva Categoría
+        </button>
+    </div>
+    
+    <div id="categoriesContainer">
+        <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+    </div>
+</div>
+
+<div class="modal fade" id="categoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Nueva Categoría</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="categoryForm">
+                    <input type="hidden" id="categoryId">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <textarea class="form-control" id="description" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveCategory()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{#section "scripts"}}
+<script>
+const token = localStorage.getItem('token');
+let categories = [];
+let editingId = null;
+
+async function loadCategories() {
+    try {
+        const response = await fetch('/api/categories', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            categories = data.data;
+            displayCategories(categories);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function displayCategories(categories) {
+    const container = document.getElementById('categoriesContainer');
+    
+    if (categories.length === 0) {
+        container.innerHTML = '<p class="text-center text-muted py-5">No hay categorías. Crea una para empezar.</p>';
+        return;
+    }
+    
+    container.innerHTML = `
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr><th>Nombre</th><th>Descripción</th><th>Productos</th><th>Acciones</th></tr>
+                </thead>
+                <tbody>
+                    ${categories.map(cat => `
+                        <tr>
+                            <td>${cat.name}</td>
+                            <td>${cat.description || '-'}</td>
+                            <td>${cat.productCount || 0}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="openEditModal('${cat._id}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteCategory('${cat._id}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+window.openCreateModal = function() {
+    editingId = null;
+    document.getElementById('modalTitle').textContent = 'Nueva Categoría';
+    document.getElementById('categoryForm').reset();
+    document.getElementById('categoryId').value = '';
+};
+
+window.openEditModal = function(id) {
+    const cat = categories.find(c => c._id === id);
+    if (!cat) return;
+    
+    editingId = id;
+    document.getElementById('modalTitle').textContent = 'Editar Categoría';
+    document.getElementById('categoryId').value = id;
+    document.getElementById('name').value = cat.name;
+    document.getElementById('description').value = cat.description || '';
+    
+    new bootstrap.Modal(document.getElementById('categoryModal')).show();
+};
+
+window.saveCategory = async function() {
+    const data = {
+        name: document.getElementById('name').value,
+        description: document.getElementById('description').value
+    };
+    
+    const method = editingId ? 'PUT' : 'POST';
+    const url = editingId ? `/api/categories/${editingId}` : '/api/categories';
+    
+    try {
+        const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('categoryModal')).hide();
+            loadCategories();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+};
+
+window.deleteCategory = async function(id) {
+    if (!confirm('¿Eliminar esta categoría?')) return;
+    
+    try {
+        const response = await fetch(`/api/categories/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            loadCategories();
+        } else {
+            const data = await response.json();
+            alert(data.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+};
+
+loadCategories();
+</script>
+{{/section}}

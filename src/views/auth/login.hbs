@@ -1,0 +1,193 @@
+{{!-- src/views/auth/login.hbs --}}
+{{!-- Página de inicio de sesión --}}
+
+<div class="auth-container">
+    <div class="container">
+        <div class="row justify-content-center align-items-center min-vh-100">
+            <div class="col-md-5">
+                <div class="card shadow-lg border-0 rounded-lg">
+                    <div class="card-header bg-primary text-white text-center py-4">
+                        <img src="/uploads/logos/apicenar-logo.png" alt="ApiCenar" class="mb-3" style="height: 50px;" onerror="this.style.display='none'">
+                        <h3 class="mb-0">¡Bienvenido a ApiCenar!</h3>
+                        <p class="mb-0">Inicia sesión para continuar</p>
+                    </div>
+                    
+                    <div class="card-body p-5">
+                        <form id="loginForm" class="needs-validation" novalidate>
+                            <div class="mb-4">
+                                <label for="userNameOrEmail" class="form-label fw-semibold">
+                                    <i class="fas fa-user me-2"></i>Usuario o Correo
+                                </label>
+                                <input type="text" 
+                                       class="form-control form-control-lg" 
+                                       id="userNameOrEmail" 
+                                       name="userNameOrEmail" 
+                                       placeholder="ejemplo@correo.com o usuario123"
+                                       required>
+                                <div class="invalid-feedback">
+                                    Por favor ingresa tu usuario o correo
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="password" class="form-label fw-semibold">
+                                    <i class="fas fa-lock me-2"></i>Contraseña
+                                </label>
+                                <div class="input-group">
+                                    <input type="password" 
+                                           class="form-control form-control-lg" 
+                                           id="password" 
+                                           name="password" 
+                                           placeholder="••••••••"
+                                           required>
+                                    <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="invalid-feedback">
+                                    Por favor ingresa tu contraseña
+                                </div>
+                            </div>
+                            
+                            <div id="loginError" class="alert alert-danger d-none" role="alert"></div>
+                            
+                            <button type="submit" class="btn btn-primary btn-lg w-100 mb-3" id="loginBtn">
+                                <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
+                                <span class="spinner-border spinner-border-sm d-none" id="loginSpinner"></span>
+                            </button>
+                            
+                            <div class="text-center mb-3">
+                                <a href="/auth/forgot-password" class="text-decoration-none">
+                                    <i class="fas fa-key me-1"></i>¿Olvidaste tu contraseña?
+                                </a>
+                            </div>
+                        </form>
+                        
+                        <hr class="my-4">
+                        
+                        <div class="text-center">
+                            <p class="mb-3">¿No tienes una cuenta?</p>
+                            <div class="d-grid gap-2">
+                                <a href="/auth/register-client" class="btn btn-outline-primary btn-lg">
+                                    <i class="fas fa-user-plus me-2"></i>Registrarse como Cliente/Delivery
+                                </a>
+                                <a href="/auth/register-commerce" class="btn btn-outline-success btn-lg">
+                                    <i class="fas fa-store me-2"></i>Registrar mi Comercio
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer text-center py-3 bg-light">
+                        <small class="text-muted">
+                            © 2026 ApiCenar - Todos los derechos reservados
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{#section "scripts"}}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('loginForm');
+        const errorDiv = document.getElementById('loginError');
+        const loginBtn = document.getElementById('loginBtn');
+        const spinner = document.getElementById('loginSpinner');
+        const toggleBtn = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+        
+        // Toggle password visibility
+        toggleBtn.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            this.querySelector('i').classList.toggle('fa-eye');
+            this.querySelector('i').classList.toggle('fa-eye-slash');
+        });
+        
+        // Form validation
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!form.checkValidity()) {
+                e.stopPropagation();
+                form.classList.add('was-validated');
+                return;
+            }
+            
+            // Show loading state
+            loginBtn.disabled = true;
+            spinner.classList.remove('d-none');
+            errorDiv.classList.add('d-none');
+            
+            const formData = {
+                userNameOrEmail: document.getElementById('userNameOrEmail').value,
+                password: document.getElementById('password').value
+            };
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Store token in localStorage
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    // Redirect based on role
+                    switch (data.user.role) {
+                        case 'Admin':
+                            window.location.href = '/admin/dashboard';
+                            break;
+                        case 'Client':
+                            window.location.href = '/client/home';
+                            break;
+                        case 'Commerce':
+                            window.location.href = '/commerce/home';
+                            break;
+                        case 'Delivery':
+                            window.location.href = '/delivery/home';
+                            break;
+                        default:
+                            window.location.href = '/';
+                    }
+                } else {
+                    errorDiv.textContent = data.message || 'Error al iniciar sesión';
+                    errorDiv.classList.remove('d-none');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                errorDiv.textContent = 'Error de conexión. Intenta nuevamente.';
+                errorDiv.classList.remove('d-none');
+            } finally {
+                loginBtn.disabled = false;
+                spinner.classList.add('d-none');
+            }
+        });
+        
+        // Bootstrap validation
+        (function() {
+            'use strict';
+            var forms = document.querySelectorAll('.needs-validation');
+            Array.prototype.slice.call(forms).forEach(function(form) {
+                form.addEventListener('submit', function(event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                }, false);
+            });
+        })();
+    });
+</script>
+{{/section}}

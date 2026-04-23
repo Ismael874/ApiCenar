@@ -1,0 +1,83 @@
+{{!-- src/views/admin/dashboard.hbs --}}
+<div class="container py-4">
+    <h2 class="mb-4"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h2>
+    
+    <div id="dashboardContainer">
+        <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+    </div>
+</div>
+
+{{#section "scripts"}}
+<script>
+const token = localStorage.getItem('token');
+
+async function loadDashboard() {
+    try {
+        const response = await fetch('/api/admin/dashboard', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            displayDashboard(data);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function displayDashboard(data) {
+    const container = document.getElementById('dashboardContainer');
+    
+    container.innerHTML = `
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="stat-card bg-primary text-white">
+                    <div class="stat-icon bg-white bg-opacity-25"><i class="fas fa-shopping-bag"></i></div>
+                    <h3 class="stat-value">${data.orders.total}</h3>
+                    <p class="stat-label">Total Pedidos</p>
+                    <small>${data.orders.today} hoy</small>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="stat-card bg-success text-white">
+                    <div class="stat-icon bg-white bg-opacity-25"><i class="fas fa-store"></i></div>
+                    <h3 class="stat-value">${data.commerce.active}</h3>
+                    <p class="stat-label">Comercios Activos</p>
+                    <small>${data.commerce.inactive} inactivos</small>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="stat-card bg-info text-white">
+                    <div class="stat-icon bg-white bg-opacity-25"><i class="fas fa-users"></i></div>
+                    <h3 class="stat-value">${data.clients.active}</h3>
+                    <p class="stat-label">Clientes Activos</p>
+                    <small>${data.clients.inactive} inactivos</small>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="stat-card bg-warning text-white">
+                    <div class="stat-icon bg-white bg-opacity-25"><i class="fas fa-motorcycle"></i></div>
+                    <h3 class="stat-value">${data.deliveries.active}</h3>
+                    <p class="stat-label">Deliveries Activos</p>
+                    <small>${data.deliveries.inactive} inactivos</small>
+                </div>
+            </div>
+        </div>
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-pizza-slice fa-3x text-primary mb-3"></i>
+                        <h3>${data.products.total}</h3>
+                        <p class="text-muted">Productos en el sistema</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+loadDashboard();
+</script>
+{{/section}}

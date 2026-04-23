@@ -1,0 +1,120 @@
+{{!-- src/views/commerce/order-detail.hbs --}}
+<div class="container py-4">
+    <div class="d-flex align-items-center mb-4">
+        <a href="/commerce/home" class="btn btn-outline-secondary me-3"><i class="fas fa-arrow-left"></i></a>
+        <h2 class="mb-0">Detalle del Pedido</h2>
+    </div>
+    
+    <div id="orderDetailContainer">
+        <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+    </div>
+</div>
+
+{{#section "scripts"}}
+<script>
+const orderId = window.location.pathname.split('/').pop();
+const token = localStorage.getItem('token');
+
+async function loadOrderDetail() {
+    try {
+        const response = await fetch(`/api/orders/commerce/${orderId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const order = await response.json();
+            displayOrderDetail(order);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function displayOrderDetail(order) {
+    const container = document.getElementById('orderDetailContainer');
+    
+    container.innerHTML = `
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-3">
+                    <div>
+                        <h4>Cliente: ${order.client.name}</h4>
+                        <p>Tel: ${order.client.phone} | Email: ${order.client.email}</p>
+                    </div>
+                    <span class="badge bg-${getStatusColor(order.status)} fs-6">${getStatusText(order.status)}</span>
+                </div>
+                
+                <h5>Dirección de entrega</h5>
+                <p>${order.address.street}, ${order.address.sector}, ${order.address.city}</p>
+                ${order.address.reference ? `<p class="text-muted">${order.address.reference}</p>` : ''}
+                
+                <h5 class="mt-4">Productos</h5>
+                ${order.items.map(item => `
+                    <div class="d-flex justify-content-between border-bottom py-2">
+                        <span>${item.quantity}x ${item.name}</span>
+                        <span>RD$ ${(item.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                `).join('')}
+                
+                <hr>
+                <div class="text-end">
+                    <p>Subtotal: RD$ ${order.subtotal.toFixed(2)}</p>
+                    <p>ITBIS: RD$ ${order.itbisAmount.toFixed(2)}</p>
+                    <h4>Total: RD$ ${order.total.toFixed(2)}</h4>
+                </div>
+                
+                ${order.canAssignDelivery ? `
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-motorcycle me-2"></i>
+                        Hay ${order.availableDeliveries} delivery(s) disponible(s)
+                    </div>
+                    <button class="btn btn-success btn-lg w-100" onclick="assignDelivery('${order.id}')">
+                        <i class="fas fa-user-plus me-2"></i>Asignar Delivery
+                    </button>
+                ` : ''}
+                
+                ${order.delivery ? `
+                    <div class="alert alert-success mt-3">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Delivery asignado: ${order.delivery.name} - ${order.delivery.phone}
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+window.assignDelivery = async function(id) {
+    if (!confirm('¿Asignar delivery a este pedido?')) return;
+    
+    try {
+        const response = await fetch(`/api/orders/${id}/assign-delivery`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            alert('Delivery asignado exitosamente');
+            loadOrderDetail();
+        } else {
+            const data = await response.json();
+            alert(data.message || 'Error al asignar delivery');
+        }
+    } catch (error) {
+        alert('Error de conexión');
+    }
+};
+
+function getStatusText(s) {
+    const map = { 'Pending': 'Pendiente', 'InProgress': 'En Proceso', 'Completed': 'Completado' };
+    return map[s] || s;
+}
+
+function getStatusColor(s) {
+    const map = { 'Pending': 'warning', 'InProgress': 'info', 'Completed': 'success' };
+    return map[s] || 'secondary';
+}
+
+loadOrderDetail();
+</script>
+{{/section}}

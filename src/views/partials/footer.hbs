@@ -1,0 +1,86 @@
+{{!-- src/views/partials/footer.hbs --}}
+{{!-- Footer común para todas las páginas --}}
+
+<footer class="footer mt-auto py-4 bg-dark text-white">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4 mb-3 mb-md-0">
+                <h5 class="text-white">
+                    <i class="fas fa-utensils me-2"></i>ApiCenar
+                </h5>
+                <p class="text-white-50 small">
+                    La mejor plataforma de pedidos de comida a domicilio. 
+                    Conectamos clientes con sus comercios favoritos.
+                </p>
+                <div class="social-links">
+                    <a href="#" class="text-white-50 me-3"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" class="text-white-50 me-3"><i class="fab fa-instagram"></i></a>
+                    <a href="#" class="text-white-50"><i class="fab fa-twitter"></i></a>
+                </div>
+            </div>
+            
+            <div class="col-md-2 mb-3 mb-md-0">
+                <h6 class="text-white">Enlaces rápidos</h6>
+                <ul class="list-unstyled">
+                    <li><a href="/" class="text-white-50 text-decoration-none small">Inicio</a></li>
+                    {{#if user}}
+                        {{#if (eq user.role "Client")}}
+                            <li><a href="/client/orders" class="text-white-50 text-decoration-none small">Mis Pedidos</a></li>
+                            <li><a href="/client/favorites" class="text-white-50 text-decoration-none small">Favoritos</a></li>
+                        {{/if}}
+                    {{else}}
+                        <li><a href="/auth/login" class="text-white-50 text-decoration-none small">Iniciar Sesión</a></li>
+                        <li><a href="/auth/register-client" class="text-white-50 text-decoration-none small">Registrarse</a></li>
+                    {{/if}}
+                </ul>
+            </div>
+            
+            <div class="col-md-3 mb-3 mb-md-0">
+                <h6 class="text-white">Contacto</h6>
+                <ul class="list-unstyled text-white-50 small">
+                    <li><i class="fas fa-phone me-2"></i>809-123-4567</li>
+                    <li><i class="fas fa-envelope me-2"></i>info@apicenar.com</li>
+                    <li><i class="fas fa-map-marker-alt me-2"></i>Santo Domingo, RD</li>
+                </ul>
+            </div>
+            
+            <div class="col-md-3">
+                <h6 class="text-white">Horario de atención</h6>
+                <ul class="list-unstyled text-white-50 small">
+                    <li>Lunes a Viernes: 8:00 AM - 10:00 PM</li>
+                    <li>Sábados y Domingos: 9:00 AM - 11:00 PM</li>
+                </ul>
+            </div>
+        </div>
+        
+        <hr class="my-3 bg-secondary">
+        
+        <div class="row align-items-center">
+            <div class="col-md-6 text-center text-md-start">
+                <small class="text-white-50">
+                    &copy; 2026 ApiCenar. Todos los derechos reservados.
+                </small>
+            </div>
+            <div class="col-md-6 text-center text-md-end">
+                <small class="text-white-50">
+                    Desarrollado con <i class="fas fa-heart text-danger"></i> por ITLA
+                </small>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<style>
+    .footer {
+        margin-top: auto;
+    }
+    
+    .footer a:hover {
+        color: #e74c3c !important;
+        transition: color 0.3s ease;
+    }
+    
+    .social-links a:hover {
+        color: #e74c3c !important;
+    }
+</style>

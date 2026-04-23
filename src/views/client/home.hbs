@@ -1,0 +1,311 @@
+{{!-- src/views/client/home.hbs --}}
+{{!-- Home del cliente - Muestra tipos de comercio --}}
+
+<div class="client-home">
+    {{!-- Header con bienvenida --}}
+    <div class="bg-primary text-white py-4 mb-4">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="display-5 fw-bold mb-2">
+                        <i class="fas fa-utensils me-3"></i>¡Hola, {{user.firstName}}!
+                    </h1>
+                    <p class="lead mb-0">¿Qué te provoca comer hoy?</p>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <img src="{{user.profileImage}}" alt="{{user.firstName}}" class="rounded-circle" style="width: 60px; height: 60px; object-fit: cover;">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        {{!-- Buscador de comercios --}}
+        <div class="row mb-4">
+            <div class="col-md-8 mx-auto">
+                <div class="search-box">
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="fas fa-search text-muted"></i>
+                        </span>
+                        <input type="text" 
+                               class="form-control border-start-0" 
+                               id="searchCommerce" 
+                               placeholder="Buscar comercio por nombre...">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {{!-- Tipos de comercio --}}
+        <h2 class="mb-4">
+            <i class="fas fa-tags me-2 text-primary"></i>Categorías
+        </h2>
+        
+        <div class="row g-4" id="commerceTypesContainer">
+            {{!-- Los tipos de comercio se cargan dinámicamente con JavaScript --}}
+            <div class="col-12 text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando categorías...</span>
+                </div>
+            </div>
+        </div>
+        
+        {{!-- Comercios destacados o recientes --}}
+        <h2 class="mb-4 mt-5">
+            <i class="fas fa-star me-2 text-warning"></i>Comercios populares
+        </h2>
+        
+        <div class="row g-4" id="popularCommercesContainer">
+            <div class="col-12 text-center py-3">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando comercios...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{#section "scripts"}}
+<script>
+    document.addEventListener('DOMContentLoaded', async function() {
+        const token = localStorage.getItem('token');
+        
+        // Cargar tipos de comercio
+        await loadCommerceTypes();
+        
+        // Cargar comercios populares
+        await loadPopularCommerces();
+        
+        // Configurar buscador
+        setupSearch();
+        
+        async function loadCommerceTypes() {
+            try {
+                const response = await fetch('/api/commerce-types?page=1&pageSize=20', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayCommerceTypes(data.data || []);
+                }
+            } catch (error) {
+                console.error('Error cargando tipos de comercio:', error);
+            }
+        }
+        
+        function displayCommerceTypes(types) {
+            const container = document.getElementById('commerceTypesContainer');
+            
+            if (types.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12 text-center py-4">
+                        <i class="fas fa-store-slash fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No hay categorías disponibles</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = types.map(type => `
+                <div class="col-6 col-md-4 col-lg-3">
+                    <a href="/client/commerces/${type._id}" class="text-decoration-none">
+                        <div class="card commerce-type-card h-100 shadow-sm hover-shadow">
+                            <div class="card-body text-center">
+                                <img src="${type.icon || '/uploads/icons/default-icon.png'}" 
+                                     alt="${type.name}" 
+                                     class="commerce-type-icon mb-3"
+                                     style="width: 64px; height: 64px; object-fit: contain;">
+                                <h5 class="card-title text-dark mb-0">${type.name}</h5>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            `).join('');
+        }
+        
+        async function loadPopularCommerces() {
+            try {
+                const response = await fetch('/api/commerce?page=1&pageSize=6&sortBy=orders&sortDirection=desc', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayPopularCommerces(data.data || []);
+                }
+            } catch (error) {
+                console.error('Error cargando comercios populares:', error);
+            }
+        }
+        
+        function displayPopularCommerces(commerces) {
+            const container = document.getElementById('popularCommercesContainer');
+            
+            if (commerces.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12 text-center py-4">
+                        <i class="fas fa-store fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No hay comercios disponibles</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = commerces.map(commerce => `
+                <div class="col-md-6 col-lg-4">
+                    <div class="card commerce-card h-100 shadow-sm hover-shadow">
+                        <a href="/client/catalog/${commerce._id}" class="text-decoration-none">
+                            <img src="${commerce.logo || '/uploads/logos/default-logo.png'}" 
+                                 class="card-img-top" 
+                                 alt="${commerce.name}"
+                                 style="height: 160px; object-fit: cover;">
+                        </a>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <a href="/client/catalog/${commerce._id}" class="text-decoration-none">
+                                    <h5 class="card-title text-dark">${commerce.name}</h5>
+                                </a>
+                                <button class="btn btn-link text-danger p-0 favorite-btn" 
+                                        data-commerce-id="${commerce._id}"
+                                        data-is-favorite="${commerce.isFavorite || false}">
+                                    <i class="fa${commerce.isFavorite ? 's' : 'r'} fa-heart"></i>
+                                </button>
+                            </div>
+                            <p class="card-text text-muted small">
+                                <i class="fas fa-clock me-1"></i>
+                                ${commerce.openingTime} - ${commerce.closingTime}
+                            </p>
+                            <p class="card-text text-muted small">
+                                <i class="fas fa-tag me-1"></i>
+                                ${commerce.commerceType?.name || 'Sin categoría'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Agregar event listeners para favoritos
+            document.querySelectorAll('.favorite-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const commerceId = btn.dataset.commerceId;
+                    const isFavorite = btn.dataset.isFavorite === 'true';
+                    
+                    if (isFavorite) {
+                        await removeFavorite(commerceId, btn);
+                    } else {
+                        await addFavorite(commerceId, btn);
+                    }
+                });
+            });
+        }
+        
+        async function addFavorite(commerceId, btn) {
+            try {
+                const response = await fetch('/api/favorites', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ commerceId })
+                });
+                
+                if (response.ok) {
+                    btn.dataset.isFavorite = 'true';
+                    btn.querySelector('i').classList.remove('far');
+                    btn.querySelector('i').classList.add('fas');
+                    showToast('Comercio agregado a favoritos', 'success');
+                }
+            } catch (error) {
+                console.error('Error agregando favorito:', error);
+            }
+        }
+        
+        async function removeFavorite(commerceId, btn) {
+            try {
+                const response = await fetch(`/api/favorites/${commerceId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    btn.dataset.isFavorite = 'false';
+                    btn.querySelector('i').classList.remove('fas');
+                    btn.querySelector('i').classList.add('far');
+                    showToast('Comercio removido de favoritos', 'info');
+                }
+            } catch (error) {
+                console.error('Error removiendo favorito:', error);
+            }
+        }
+        
+        function setupSearch() {
+            const searchInput = document.getElementById('searchCommerce');
+            let debounceTimer;
+            
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(async () => {
+                    const query = e.target.value.trim();
+                    if (query.length >= 2) {
+                        await searchCommerces(query);
+                    } else if (query.length === 0) {
+                        await loadPopularCommerces();
+                    }
+                }, 500);
+            });
+        }
+        
+        async function searchCommerces(query) {
+            try {
+                const response = await fetch(`/api/commerce?search=${encodeURIComponent(query)}&page=1&pageSize=10`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayPopularCommerces(data.data || []);
+                }
+            } catch (error) {
+                console.error('Error buscando comercios:', error);
+            }
+        }
+        
+        function showToast(message, type = 'info') {
+            // Implementar toast notification
+            const toastContainer = document.createElement('div');
+            toastContainer.className = 'position-fixed bottom-0 end-0 p-3';
+            toastContainer.style.zIndex = '11';
+            
+            toastContainer.innerHTML = `
+                <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'info'} border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(toastContainer);
+            const toast = new bootstrap.Toast(toastContainer.querySelector('.toast'));
+            toast.show();
+            
+            setTimeout(() => toastContainer.remove(), 3000);
+        }
+    });
+</script>
+{{/section}}

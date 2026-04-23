@@ -1,0 +1,72 @@
+{{!-- src/views/delivery/home.hbs --}}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-motorcycle me-2"></i>Mis Pedidos Asignados</h2>
+        <span class="badge bg-primary" id="orderCount"></span>
+    </div>
+    
+    <div id="ordersContainer">
+        <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+    </div>
+</div>
+
+{{#section "scripts"}}
+<script>
+const token = localStorage.getItem('token');
+
+async function loadOrders() {
+    try {
+        const response = await fetch('/api/orders/delivery?page=1&pageSize=50', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('orderCount').textContent = `${data.pagination.total} pedidos`;
+            displayOrders(data.data);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function displayOrders(orders) {
+    const container = document.getElementById('ordersContainer');
+    
+    if (orders.length === 0) {
+        container.innerHTML = '<p class="text-center text-muted py-5">No tienes pedidos asignados</p>';
+        return;
+    }
+    
+    container.innerHTML = orders.map(order => `
+        <div class="order-card status-${order.status.toLowerCase()}" onclick="window.location.href='/delivery/orders/${order.id}'">
+            <div class="d-flex align-items-center">
+                <img src="${order.commerce.logo}" style="width: 50px; height: 50px; object-fit: cover;" class="rounded me-3">
+                <div class="flex-grow-1">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6>${order.commerce.name}</h6>
+                            <span class="badge bg-${order.status === 'InProgress' ? 'info' : 'success'}">${order.status === 'InProgress' ? 'En Proceso' : 'Completado'}</span>
+                        </div>
+                        <strong>RD$ ${order.total.toFixed(2)}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <small>Cliente: ${order.client.name}</small>
+                        <small>${formatDate(order.createdAt)}</small>
+                    </div>
+                    ${order.status === 'InProgress' && order.address ? `
+                        <small class="text-muted d-block mt-1"><i class="fas fa-map-marker-alt"></i> ${order.address.street}</small>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function formatDate(d) {
+    return new Date(d).toLocaleString('es-DO', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+loadOrders();
+</script>
+{{/section}}

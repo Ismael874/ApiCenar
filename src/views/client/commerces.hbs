@@ -1,0 +1,171 @@
+{{!-- src/views/client/commerces.hbs --}}
+<div class="container py-4">
+    <div class="d-flex align-items-center mb-4">
+        <a href="/client/home" class="btn btn-outline-secondary me-3">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <h2 class="mb-0" id="typeName">Comercios</h2>
+        <span class="badge bg-primary ms-3" id="commerceCount">0 comercios</span>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                <input type="text" class="form-control" id="searchInput" placeholder="Buscar comercio por nombre...">
+            </div>
+        </div>
+    </div>
+    
+    <div class="row g-4" id="commercesContainer">
+        <div class="col-12 text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando comercios...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{#section "scripts"}}
+<script>
+const typeId = window.location.pathname.split('/').pop();
+const token = localStorage.getItem('token');
+let currentPage = 1;
+let searchQuery = '';
+
+async function loadCommerceTypes() {
+    try {
+        const response = await fetch('/api/commerce-types', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            const type = data.data.find(t => t._id === typeId);
+            if (type) {
+                document.getElementById('typeName').textContent = type.name;
+            }
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function loadCommerces() {
+    try {
+        let url = `/api/commerce?commerceTypeId=${typeId}&page=${currentPage}&pageSize=12`;
+        if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
+        
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('commerceCount').textContent = `${data.pagination.total} comercios`;
+            displayCommerces(data.data);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function displayCommerces(commerces) {
+    const container = document.getElementById('commercesContainer');
+    
+    if (commerces.length === 0) {
+        container.innerHTML = `
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-store-slash fa-4x text-muted mb-3"></i>
+                <h4>No se encontraron comercios</h4>
+                <p class="text-muted">Intenta con otra búsqueda</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = commerces.map(commerce => `
+        <div class="col-md-6 col-lg-4">
+            <div class="card commerce-card h-100 shadow-sm">
+                <a href="/client/catalog/${commerce.id}">
+                    <img src="${commerce.logo}" class="card-img-top" alt="${commerce.name}" style="height: 160px; object-fit: cover;">
+                </a>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="card-title">${commerce.name}</h5>
+                            <p class="card-text text-muted small">${commerce.description || ''}</p>
+                        </div>
+                        <button class="btn btn-link text-danger p-0 favorite-btn" data-commerce-id="${commerce.id}" data-is-favorite="${commerce.isFavorite}">
+                            <i class="fa${commerce.isFavorite ? 's' : 'r'} fa-heart"></i>
+                        </button>
+                    </div>
+                    <div class="mt-2">
+                        <span class="badge bg-light text-dark">
+                            <i class="fas fa-clock me-1"></i>${commerce.openingTime} - ${commerce.closingTime}
+                        </span>
+                        ${commerce.rating ? `<span class="badge bg-warning text-dark ms-1"><i class="fas fa-star"></i> ${commerce.rating}</span>` : ''}
+                    </div>
+                    <a href="/client/catalog/${commerce.id}" class="btn btn-primary w-100 mt-3">
+                        <i class="fas fa-eye me-2"></i>Ver Catálogo
+                    </a>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    document.querySelectorAll('.favorite-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const commerceId = btn.dataset.commerceId;
+            const isFavorite = btn.dataset.isFavorite === 'true';
+            
+            if (isFavorite) {
+                await removeFavorite(commerceId, btn);
+            } else {
+                await addFavorite(commerceId, btn);
+            }
+        });
+    });
+}
+
+async function addFavorite(commerceId, btn) {
+    const response = await fetch('/api/favorites', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ commerceId })
+    });
+    
+    if (response.ok) {
+        btn.dataset.isFavorite = 'true';
+        btn.querySelector('i').classList.remove('far');
+        btn.querySelector('i').classList.add('fas');
+    }
+}
+
+async function removeFavorite(commerceId, btn) {
+    const response = await fetch(`/api/favorites/${commerceId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (response.ok) {
+        btn.dataset.isFavorite = 'false';
+        btn.querySelector('i').classList.remove('fas');
+        btn.querySelector('i').classList.add('far');
+    }
+}
+
+document.getElementById('searchInput').addEventListener('input', (e) => {
+    searchQuery = e.target.value;
+    currentPage = 1;
+    loadCommerces();
+});
+
+loadCommerceTypes();
+loadCommerces();
+</script>
+{{/section}}

@@ -1,0 +1,207 @@
+{{!-- src/views/commerce/products.hbs --}}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-pizza-slice me-2"></i>Productos</h2>
+        <button class="btn btn-primary" onclick="openCreateModal()">
+            <i class="fas fa-plus me-2"></i>Nuevo Producto
+        </button>
+    </div>
+    
+    <div id="productsContainer">
+        <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+    </div>
+</div>
+
+<div class="modal fade" id="productModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Nuevo Producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="productForm" enctype="multipart/form-data">
+                    <input type="hidden" id="productId">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" class="form-control" name="name" id="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <textarea class="form-control" name="description" id="description" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Precio (RD$)</label>
+                        <input type="number" class="form-control" name="price" id="price" step="0.01" min="0" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Categoría</label>
+                        <select class="form-select" name="categoryId" id="categoryId" required>
+                            <option value="">Selecciona una categoría</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Imagen</label>
+                        <input type="file" class="form-control" name="image" id="imageInput" accept="image/*">
+                        <img id="imagePreview" src="" class="mt-2 rounded" style="max-width: 100px; display: none;">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveProduct()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{#section "scripts"}}
+<script>
+const token = localStorage.getItem('token');
+let products = [];
+let categories = [];
+let editingId = null;
+
+async function loadData() {
+    await Promise.all([loadCategories(), loadProducts()]);
+}
+
+async function loadCategories() {
+    const response = await fetch('/api/categories', {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (response.ok) {
+        const data = await response.json();
+        categories = data.data;
+        const select = document.getElementById('categoryId');
+        select.innerHTML = '<option value="">Selecciona una categoría</option>' +
+            categories.map(c => `<option value="${c._id}">${c.name}</option>`).join('');
+    }
+}
+
+async function loadProducts() {
+    const response = await fetch('/api/products', {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (response.ok) {
+        const data = await response.json();
+        products = data.data;
+        displayProducts(products);
+    }
+}
+
+function displayProducts(products) {
+    const container = document.getElementById('productsContainer');
+    
+    if (products.length === 0) {
+        container.innerHTML = '<p class="text-center text-muted py-5">No hay productos. Agrega tu primer producto.</p>';
+        return;
+    }
+    
+    container.innerHTML = `
+        <div class="row g-4">
+            ${products.map(p => `
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100">
+                        <img src="${p.image}" class="card-img-top" alt="${p.name}" style="height: 150px; object-fit: cover;">
+                        <div class="card-body">
+                            <h6 class="card-title">${p.name}</h6>
+                            <p class="card-text small text-muted">${p.description || ''}</p>
+                            <p class="mb-1"><strong>RD$ ${p.price.toFixed(2)}</strong></p>
+                            <p class="small text-muted">Categoría: ${p.category?.name || 'Sin categoría'}</p>
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-outline-primary" onclick="openEditModal('${p._id}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('${p._id}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+window.openCreateModal = function() {
+    editingId = null;
+    document.getElementById('modalTitle').textContent = 'Nuevo Producto';
+    document.getElementById('productForm').reset();
+    document.getElementById('productId').value = '';
+    document.getElementById('imagePreview').style.display = 'none';
+};
+
+window.openEditModal = function(id) {
+    const product = products.find(p => p._id === id);
+    if (!product) return;
+    
+    editingId = id;
+    document.getElementById('modalTitle').textContent = 'Editar Producto';
+    document.getElementById('productId').value = id;
+    document.getElementById('name').value = product.name;
+    document.getElementById('description').value = product.description || '';
+    document.getElementById('price').value = product.price;
+    document.getElementById('categoryId').value = product.category?._id || '';
+    
+    if (product.image) {
+        document.getElementById('imagePreview').src = product.image;
+        document.getElementById('imagePreview').style.display = 'block';
+    }
+    
+    new bootstrap.Modal(document.getElementById('productModal')).show();
+};
+
+window.saveProduct = async function() {
+    const formData = new FormData(document.getElementById('productForm'));
+    if (!editingId) formData.delete('image'); // No enviar campo vacío
+    
+    const method = editingId ? 'PUT' : 'POST';
+    const url = editingId ? `/api/products/${editingId}` : '/api/products';
+    
+    try {
+        const response = await fetch(url, {
+            method,
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+        
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('productModal')).hide();
+            loadProducts();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+};
+
+window.deleteProduct = async function(id) {
+    if (!confirm('¿Eliminar este producto?')) return;
+    
+    try {
+        await fetch(`/api/products/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        loadProducts();
+    } catch (error) {
+        console.error('Error:', error);
+    }
+};
+
+document.getElementById('imageInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            document.getElementById('imagePreview').src = e.target.result;
+            document.getElementById('imagePreview').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+loadData();
+</script>
+{{/section}}

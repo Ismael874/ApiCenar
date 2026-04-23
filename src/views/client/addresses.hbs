@@ -1,0 +1,199 @@
+{{!-- src/views/client/addresses.hbs --}}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-map-marker-alt me-2"></i>Mis Direcciones</h2>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addressModal" onclick="openCreateModal()">
+            <i class="fas fa-plus me-2"></i>Nueva Dirección
+        </button>
+    </div>
+    
+    <div id="addressesContainer">
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addressModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Nueva Dirección</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addressForm">
+                    <input type="hidden" id="addressId">
+                    <div class="mb-3">
+                        <label class="form-label">Etiqueta</label>
+                        <input type="text" class="form-control" id="label" placeholder="Ej: Mi Casa, Trabajo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Calle</label>
+                        <input type="text" class="form-control" id="street" placeholder="Calle y número" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Sector</label>
+                        <input type="text" class="form-control" id="sector" placeholder="Sector o barrio" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ciudad</label>
+                        <input type="text" class="form-control" id="city" value="Santo Domingo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Referencia (opcional)</label>
+                        <textarea class="form-control" id="reference" rows="2"></textarea>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="isDefault">
+                        <label class="form-check-label">Establecer como predeterminada</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveAddress()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{#section "scripts"}}
+<script>
+const token = localStorage.getItem('token');
+let addresses = [];
+let editingId = null;
+
+async function loadAddresses() {
+    try {
+        const response = await fetch('/api/addresses', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            addresses = data.data;
+            displayAddresses(addresses);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function displayAddresses(addresses) {
+    const container = document.getElementById('addressesContainer');
+    
+    if (addresses.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-map-marker-alt fa-4x text-muted mb-3"></i>
+                <h4>No tienes direcciones registradas</h4>
+                <p class="text-muted">Agrega una dirección para poder hacer pedidos</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = addresses.map(addr => `
+        <div class="card mb-3 ${addr.isDefault ? 'border-primary' : ''}">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 class="mb-1">
+                            ${addr.label}
+                            ${addr.isDefault ? '<span class="badge bg-primary ms-2">Predeterminada</span>' : ''}
+                        </h5>
+                        <p class="mb-1">${addr.street}</p>
+                        <p class="mb-1">${addr.sector}, ${addr.city}</p>
+                        ${addr.reference ? `<p class="text-muted small">${addr.reference}</p>` : ''}
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="openEditModal('${addr._id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteAddress('${addr._id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+window.openCreateModal = function() {
+    editingId = null;
+    document.getElementById('modalTitle').textContent = 'Nueva Dirección';
+    document.getElementById('addressForm').reset();
+    document.getElementById('addressId').value = '';
+};
+
+window.openEditModal = function(id) {
+    const addr = addresses.find(a => a._id === id);
+    if (!addr) return;
+    
+    editingId = id;
+    document.getElementById('modalTitle').textContent = 'Editar Dirección';
+    document.getElementById('addressId').value = id;
+    document.getElementById('label').value = addr.label;
+    document.getElementById('street').value = addr.street;
+    document.getElementById('sector').value = addr.sector;
+    document.getElementById('city').value = addr.city;
+    document.getElementById('reference').value = addr.reference || '';
+    document.getElementById('isDefault').checked = addr.isDefault;
+    
+    new bootstrap.Modal(document.getElementById('addressModal')).show();
+};
+
+window.saveAddress = async function() {
+    const data = {
+        label: document.getElementById('label').value,
+        street: document.getElementById('street').value,
+        sector: document.getElementById('sector').value,
+        city: document.getElementById('city').value,
+        reference: document.getElementById('reference').value,
+        isDefault: document.getElementById('isDefault').checked
+    };
+    
+    const method = editingId ? 'PUT' : 'POST';
+    const url = editingId ? `/api/addresses/${editingId}` : '/api/addresses';
+    
+    try {
+        const response = await fetch(url, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('addressModal')).hide();
+            loadAddresses();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+};
+
+window.deleteAddress = async function(id) {
+    if (!confirm('¿Estás seguro de eliminar esta dirección?')) return;
+    
+    try {
+        const response = await fetch(`/api/addresses/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            loadAddresses();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+};
+
+loadAddresses();
+</script>
+{{/section}}

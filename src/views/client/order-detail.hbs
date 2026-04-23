@@ -1,0 +1,118 @@
+{{!-- src/views/client/order-detail.hbs --}}
+<div class="container py-4">
+    <div class="d-flex align-items-center mb-4">
+        <a href="/client/orders" class="btn btn-outline-secondary me-3">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <h2 class="mb-0">Detalle del Pedido</h2>
+    </div>
+    
+    <div id="orderDetailContainer">
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary"></div>
+        </div>
+    </div>
+</div>
+
+{{#section "scripts"}}
+<script>
+const orderId = window.location.pathname.split('/').pop();
+const token = localStorage.getItem('token');
+
+async function loadOrderDetail() {
+    try {
+        const response = await fetch(`/api/orders/my-orders/${orderId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const order = await response.json();
+            displayOrderDetail(order);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function displayOrderDetail(order) {
+    const container = document.getElementById('orderDetailContainer');
+    
+    container.innerHTML = `
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <img src="${order.commerce.logo}" style="width: 60px; height: 60px; object-fit: cover;" class="rounded me-3">
+                    <div>
+                        <h4 class="mb-1">${order.commerce.name}</h4>
+                        <span class="badge bg-${getStatusColor(order.status)}">${getStatusText(order.status)}</span>
+                        <small class="text-muted ms-3">
+                            <i class="far fa-calendar me-1"></i>${formatDateTime(order.createdAt)}
+                        </small>
+                    </div>
+                </div>
+                
+                ${order.delivery ? `
+                    <div class="alert alert-info">
+                        <i class="fas fa-motorcycle me-2"></i>
+                        Delivery asignado: ${order.delivery.name} - ${order.delivery.phone}
+                    </div>
+                ` : ''}
+                
+                <h5 class="mb-3">Productos</h5>
+                <div class="order-items">
+                    ${order.items.map(item => `
+                        <div class="d-flex align-items-center mb-3 pb-3 border-bottom">
+                            <img src="${item.image}" style="width: 60px; height: 60px; object-fit: cover;" class="rounded me-3">
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <strong>${item.name}</strong>
+                                        <span class="badge bg-secondary ms-2">x${item.quantity}</span>
+                                    </div>
+                                    <strong>RD$ ${(item.price * item.quantity).toFixed(2)}</strong>
+                                </div>
+                                <small class="text-muted">Precio unitario: RD$ ${item.price.toFixed(2)}</small>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <hr>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="mb-2">Dirección de entrega</h6>
+                        <p class="mb-0">${order.address.street}</p>
+                        <p class="mb-0">${order.address.sector}, ${order.address.city}</p>
+                        ${order.address.reference ? `<p class="text-muted">${order.address.reference}</p>` : ''}
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <p class="mb-1">Subtotal: RD$ ${order.subtotal.toFixed(2)}</p>
+                        <p class="mb-1">ITBIS (${order.itbisPercentage}%): RD$ ${order.itbisAmount.toFixed(2)}</p>
+                        <h5 class="mt-2">Total: <span class="text-primary">RD$ ${order.total.toFixed(2)}</span></h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function getStatusText(status) {
+    const map = { 'Pending': 'Pendiente', 'InProgress': 'En Proceso', 'Completed': 'Completado' };
+    return map[status] || status;
+}
+
+function getStatusColor(status) {
+    const map = { 'Pending': 'warning', 'InProgress': 'info', 'Completed': 'success' };
+    return map[status] || 'secondary';
+}
+
+function formatDateTime(date) {
+    return new Date(date).toLocaleDateString('es-DO', { 
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+    });
+}
+
+loadOrderDetail();
+</script>
+{{/section}}

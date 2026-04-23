@@ -1,0 +1,128 @@
+{{!-- src/views/error.hbs --}}
+{{!-- Página de error genérica para manejar errores 404, 500, etc. --}}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-lg border-0 rounded-lg mt-5">
+                <div class="card-body text-center p-5">
+                    
+                    {{!-- Icono según tipo de error --}}
+                    <div class="mb-4">
+                        {{#if (eq status 404)}}
+                            <i class="fas fa-map-signs fa-5x text-info"></i>
+                        {{else if (eq status 403)}}
+                            <i class="fas fa-lock fa-5x text-warning"></i>
+                        {{else if (eq status 401)}}
+                            <i class="fas fa-key fa-5x text-warning"></i>
+                        {{else}}
+                            <i class="fas fa-exclamation-triangle fa-5x text-danger"></i>
+                        {{/if}}
+                    </div>
+                    
+                    {{!-- Código de error --}}
+                    {{#if status}}
+                        <h1 class="display-1 fw-bold text-muted mb-3">{{status}}</h1>
+                    {{/if}}
+                    
+                    {{!-- Título del error --}}
+                    <h2 class="mb-3">
+                        {{#if title}}
+                            {{title}}
+                        {{else}}
+                            {{#if (eq status 404)}}
+                                Página no encontrada
+                            {{else if (eq status 403)}}
+                                Acceso denegado
+                            {{else if (eq status 401)}}
+                                No autorizado
+                            {{else}}
+                                Error del servidor
+                            {{/if}}
+                        {{/if}}
+                    </h2>
+                    
+                    {{!-- Mensaje de error --}}
+                    <p class="lead text-muted mb-4">
+                        {{#if message}}
+                            {{message}}
+                        {{else}}
+                            {{#if (eq status 404)}}
+                                La página que estás buscando no existe o ha sido movida.
+                            {{else if (eq status 403)}}
+                                No tienes permisos para acceder a este recurso.
+                            {{else if (eq status 401)}}
+                                Debes iniciar sesión para acceder a esta página.
+                            {{else}}
+                                Ha ocurrido un error inesperado. Por favor, intenta nuevamente más tarde.
+                            {{/if}}
+                        {{/if}}
+                    </p>
+                    
+                    {{!-- Información adicional en desarrollo --}}
+                    {{#if error}}
+                        {{#if (eq env "development")}}
+                            <div class="alert alert-danger text-start mb-4">
+                                <pre class="mb-0" style="font-size: 12px;">{{error.stack}}</pre>
+                            </div>
+                        {{/if}}
+                    {{/if}}
+                    
+                    {{!-- Botones de acción --}}
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        {{#if (eq status 401)}}
+                            <a href="/auth/login" class="btn btn-primary btn-lg px-4">
+                                <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
+                            </a>
+                        {{else}}
+                            <button onclick="history.back()" class="btn btn-outline-secondary btn-lg px-4">
+                                <i class="fas fa-arrow-left me-2"></i>Volver atrás
+                            </button>
+                        {{/if}}
+                        
+                        <a href="/" class="btn btn-primary btn-lg px-4">
+                            <i class="fas fa-home me-2"></i>Ir al Inicio
+                        </a>
+                    </div>
+                    
+                    {{!-- Contacto de soporte --}}
+                    <hr class="my-4">
+                    <p class="text-muted small mb-0">
+                        <i class="fas fa-headset me-1"></i>
+                        ¿Necesitas ayuda? Contacta a 
+                        <a href="mailto:soporte@apicenar.com" class="text-decoration-none">soporte@apicenar.com</a>
+                    </p>
+                </div>
+                
+                <div class="card-footer text-center py-3 bg-light">
+                    <small class="text-muted">
+                        © 2026 ApiCenar - Todos los derechos reservados
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{#section "styles"}}
+<style>
+    .error-page {
+        min-height: 60vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    .display-1 {
+        font-size: 6rem;
+        font-weight: 700;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    @media (max-width: 768px) {
+        .display-1 {
+            font-size: 4rem;
+        }
+    }
+</style>
+{{/section}}

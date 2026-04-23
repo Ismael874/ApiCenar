@@ -1,0 +1,78 @@
+{{!-- src/views/admin/commerces.hbs --}}
+<div class="container py-4">
+    <h2 class="mb-4"><i class="fas fa-store me-2"></i>Comercios</h2>
+    
+    <div id="commercesContainer">
+        <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+    </div>
+</div>
+
+{{#section "scripts"}}
+<script>
+const token = localStorage.getItem('token');
+
+async function loadCommerces() {
+    try {
+        const response = await fetch('/api/admin/users/commerces', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            displayCommerces(data.data);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function displayCommerces(commerces) {
+    const container = document.getElementById('commercesContainer');
+    
+    container.innerHTML = `
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr><th>Logo</th><th>Nombre</th><th>Tipo</th><th>Teléfono</th><th>Pedidos</th><th>Estado</th><th>Acciones</th></tr>
+                </thead>
+                <tbody>
+                    ${commerces.map(c => `
+                        <tr>
+                            <td><img src="${c.logo}" style="width: 40px; height: 40px; object-fit: cover;" class="rounded"></td>
+                            <td>${c.name}</td>
+                            <td>${c.commerceType?.name || '-'}</td>
+                            <td>${c.phone}</td>
+                            <td>${c.orderCount || 0}</td>
+                            <td><span class="badge bg-${c.isActive ? 'success' : 'danger'}">${c.isActive ? 'Activo' : 'Inactivo'}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-${c.isActive ? 'warning' : 'success'}" onclick="toggleStatus('${c.user._id}', ${!c.isActive})">
+                                    ${c.isActive ? 'Inactivar' : 'Activar'}
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+window.toggleStatus = async function(id, isActive) {
+    try {
+        const response = await fetch(`/api/admin/users/${id}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ isActive })
+        });
+        
+        if (response.ok) {
+            loadCommerces();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+};
+
+loadCommerces();
+</script>
+{{/section}}

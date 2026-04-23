@@ -1,0 +1,77 @@
+{{!-- src/views/admin/deliveries.hbs --}}
+<div class="container py-4">
+    <h2 class="mb-4"><i class="fas fa-motorcycle me-2"></i>Deliveries</h2>
+    
+    <div id="deliveriesContainer">
+        <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+    </div>
+</div>
+
+{{#section "scripts"}}
+<script>
+const token = localStorage.getItem('token');
+
+async function loadDeliveries() {
+    try {
+        const response = await fetch('/api/admin/users/deliveries', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            displayDeliveries(data.data);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function displayDeliveries(deliveries) {
+    const container = document.getElementById('deliveriesContainer');
+    
+    container.innerHTML = `
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Entregas</th><th>Estado</th><th>Acciones</th></tr>
+                </thead>
+                <tbody>
+                    ${deliveries.map(d => `
+                        <tr>
+                            <td>${d.firstName} ${d.lastName}</td>
+                            <td>${d.email}</td>
+                            <td>${d.phone}</td>
+                            <td>${d.completedOrders || 0}</td>
+                            <td><span class="badge bg-${d.isActive ? 'success' : 'danger'}">${d.isActive ? 'Activo' : 'Inactivo'}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-${d.isActive ? 'warning' : 'success'}" onclick="toggleStatus('${d._id}', ${!d.isActive})">
+                                    ${d.isActive ? 'Inactivar' : 'Activar'}
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+window.toggleStatus = async function(id, isActive) {
+    try {
+        const response = await fetch(`/api/admin/users/${id}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ isActive })
+        });
+        
+        if (response.ok) {
+            loadDeliveries();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+};
+
+loadDeliveries();
+</script>
+{{/section}}

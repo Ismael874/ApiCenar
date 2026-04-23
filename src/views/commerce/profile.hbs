@@ -1,0 +1,91 @@
+{{!-- src/views/commerce/profile.hbs --}}
+<div class="container py-4">
+    <h2 class="mb-4"><i class="fas fa-store me-2"></i>Perfil del Comercio</h2>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form id="profileForm" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label class="form-label">Correo Electrónico</label>
+                            <input type="email" class="form-control" name="email" id="email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Teléfono</label>
+                            <input type="tel" class="form-control" name="phone" id="phone" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Hora Apertura</label>
+                                <input type="time" class="form-control" name="openingTime" id="openingTime" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Hora Cierre</label>
+                                <input type="time" class="form-control" name="closingTime" id="closingTime" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Logo</label>
+                            <input type="file" class="form-control" name="logo" accept="image/*">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <img src="" id="logoPreview" class="rounded mb-3" style="width: 120px; height: 120px; object-fit: cover;">
+                    <h5 id="commerceName"></h5>
+                    <p id="commerceInfo"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{#section "scripts"}}
+<script>
+const token = localStorage.getItem('token');
+
+async function loadProfile() {
+    const response = await fetch('/api/account/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (response.ok) {
+        const data = await response.json();
+        document.getElementById('email').value = data.email;
+        document.getElementById('phone').value = data.phone;
+        document.getElementById('commerceName').textContent = data.commerce?.name || '';
+        
+        if (data.commerce) {
+            document.getElementById('openingTime').value = data.commerce.openingTime;
+            document.getElementById('closingTime').value = data.commerce.closingTime;
+            document.getElementById('logoPreview').src = data.commerce.logo;
+            document.getElementById('commerceInfo').textContent = `${data.commerce.openingTime} - ${data.commerce.closingTime}`;
+        }
+    }
+}
+
+document.getElementById('profileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    
+    const response = await fetch('/api/account/me', {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+    });
+    
+    if (response.ok) {
+        alert('Perfil actualizado');
+        loadProfile();
+    }
+});
+
+loadProfile();
+</script>
+{{/section}}

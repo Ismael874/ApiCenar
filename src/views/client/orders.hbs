@@ -1,0 +1,101 @@
+{{!-- src/views/client/orders.hbs --}}
+<div class="container py-4">
+    <h2 class="mb-4"><i class="fas fa-shopping-bag me-2"></i>Mis Pedidos</h2>
+    
+    <div class="mb-3">
+        <select class="form-select w-auto" id="statusFilter">
+            <option value="">Todos los estados</option>
+            <option value="Pending">Pendientes</option>
+            <option value="InProgress">En Proceso</option>
+            <option value="Completed">Completados</option>
+        </select>
+    </div>
+    
+    <div id="ordersContainer">
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary"></div>
+        </div>
+    </div>
+</div>
+
+{{#section "scripts"}}
+<script>
+const token = localStorage.getItem('token');
+let currentStatus = '';
+
+async function loadOrders() {
+    try {
+        let url = '/api/orders/my-orders?page=1&pageSize=50';
+        if (currentStatus) url += `&status=${currentStatus}`;
+        
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            displayOrders(data.data);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function displayOrders(orders) {
+    const container = document.getElementById('ordersContainer');
+    
+    if (orders.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-shopping-bag fa-4x text-muted mb-3"></i>
+                <h4>No tienes pedidos</h4>
+                <p class="text-muted">¡Explora los comercios y haz tu primer pedido!</p>
+                <a href="/client/home" class="btn btn-primary">Ver Comercios</a>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = orders.map(order => `
+        <div class="order-card status-${order.status.toLowerCase()}" onclick="window.location.href='/client/orders/${order.id}'">
+            <div class="d-flex align-items-center">
+                <img src="${order.commerce.logo}" style="width: 50px; height: 50px; object-fit: cover;" class="rounded me-3">
+                <div class="flex-grow-1">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">${order.commerce.name}</h6>
+                            <span class="order-badge badge-${order.status.toLowerCase()}">${getStatusText(order.status)}</span>
+                        </div>
+                        <strong class="text-primary">RD$ ${order.total.toFixed(2)}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <small class="text-muted">
+                            <i class="fas fa-box me-1"></i>${order.itemsCount} productos
+                        </small>
+                        <small class="text-muted">
+                            <i class="far fa-calendar me-1"></i>${formatDate(order.createdAt)}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function getStatusText(status) {
+    const map = { 'Pending': 'Pendiente', 'InProgress': 'En Proceso', 'Completed': 'Completado' };
+    return map[status] || status;
+}
+
+function formatDate(date) {
+    return new Date(date).toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+document.getElementById('statusFilter').addEventListener('change', (e) => {
+    currentStatus = e.target.value;
+    loadOrders();
+});
+
+loadOrders();
+</script>
+{{/section}}

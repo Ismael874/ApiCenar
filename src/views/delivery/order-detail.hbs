@@ -1,0 +1,106 @@
+{{!-- src/views/delivery/order-detail.hbs --}}
+<div class="container py-4">
+    <div class="d-flex align-items-center mb-4">
+        <a href="/delivery/home" class="btn btn-outline-secondary me-3"><i class="fas fa-arrow-left"></i></a>
+        <h2 class="mb-0">Detalle del Pedido</h2>
+    </div>
+    
+    <div id="orderDetailContainer">
+        <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+    </div>
+</div>
+
+{{#section "scripts"}}
+<script>
+const orderId = window.location.pathname.split('/').pop();
+const token = localStorage.getItem('token');
+
+async function loadOrderDetail() {
+    try {
+        const response = await fetch(`/api/orders/delivery/${orderId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const order = await response.json();
+            displayOrderDetail(order);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function displayOrderDetail(order) {
+    const container = document.getElementById('orderDetailContainer');
+    
+    container.innerHTML = `
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-3">
+                    <div>
+                        <h4>${order.commerce.name}</h4>
+                        <p>Tel: ${order.commerce.phone}</p>
+                    </div>
+                    <span class="badge bg-${order.status === 'InProgress' ? 'info' : 'success'} fs-6">
+                        ${order.status === 'InProgress' ? 'En Proceso' : 'Completado'}
+                    </span>
+                </div>
+                
+                <div class="alert alert-secondary">
+                    <h6>Cliente</h6>
+                    <p class="mb-0">${order.client.name} - Tel: ${order.client.phone}</p>
+                </div>
+                
+                ${order.address ? `
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-map-marker-alt me-2"></i>Dirección de entrega</h6>
+                        <p class="mb-0">${order.address.street}</p>
+                        <p class="mb-0">${order.address.sector}, ${order.address.city}</p>
+                        ${order.address.reference ? `<p class="text-muted mb-0">${order.address.reference}</p>` : ''}
+                    </div>
+                ` : ''}
+                
+                <h5 class="mt-4">Productos</h5>
+                ${order.items.map(item => `
+                    <div class="d-flex justify-content-between border-bottom py-2">
+                        <span>${item.quantity}x ${item.name}</span>
+                        <span>RD$ ${(item.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                `).join('')}
+                
+                <hr>
+                <div class="text-end">
+                    <h4>Total: RD$ ${order.total.toFixed(2)}</h4>
+                </div>
+                
+                ${order.status === 'InProgress' ? `
+                    <button class="btn btn-success btn-lg w-100 mt-4" onclick="completeOrder('${order.id}')">
+                        <i class="fas fa-check-circle me-2"></i>Completar Pedido
+                    </button>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+window.completeOrder = async function(id) {
+    if (!confirm('¿Confirmar que el pedido ha sido entregado?')) return;
+    
+    try {
+        const response = await fetch(`/api/orders/${id}/complete`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            alert('¡Pedido completado!');
+            window.location.href = '/delivery/home';
+        }
+    } catch (error) {
+        alert('Error de conexión');
+    }
+};
+
+loadOrderDetail();
+</script>
+{{/section}}

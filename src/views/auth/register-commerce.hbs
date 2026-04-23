@@ -1,0 +1,150 @@
+{{!-- src/views/auth/register-commerce.hbs --}}
+<div class="auth-container">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-7">
+                <div class="card shadow-lg border-0 rounded-lg">
+                    <div class="card-header bg-success text-white text-center py-4">
+                        <h3 class="mb-0"><i class="fas fa-store me-2"></i>Registro de Comercio</h3>
+                        <p class="mb-0 mt-2">Únete a ApiCenar y haz crecer tu negocio</p>
+                    </div>
+                    <div class="card-body p-4">
+                        <form id="registerForm" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label class="form-label">Nombre del Comercio</label>
+                                <input type="text" class="form-control" name="name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Descripción (opcional)</label>
+                                <textarea class="form-control" name="description" rows="2"></textarea>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Usuario</label>
+                                    <input type="text" class="form-control" name="userName" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Correo</label>
+                                    <input type="email" class="form-control" name="email" required>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Teléfono</label>
+                                    <input type="tel" class="form-control" name="phone" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Tipo de Comercio</label>
+                                    <select class="form-select" name="commerceTypeId" id="commerceType" required>
+                                        <option value="">Cargando...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Hora Apertura</label>
+                                    <input type="time" class="form-control" name="openingTime" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Hora Cierre</label>
+                                    <input type="time" class="form-control" name="closingTime" required>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Contraseña</label>
+                                    <input type="password" class="form-control" name="password" required minlength="6">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Confirmar Contraseña</label>
+                                    <input type="password" class="form-control" name="confirmPassword" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Logo del Comercio</label>
+                                <input type="file" class="form-control" name="logo" accept="image/*" required>
+                            </div>
+                            <div id="errorMessage" class="alert alert-danger d-none"></div>
+                            <div id="successMessage" class="alert alert-success d-none"></div>
+                            <button type="submit" class="btn btn-success w-100 btn-lg" id="submitBtn">
+                                <span class="spinner-border spinner-border-sm d-none" id="spinner"></span>
+                                Registrar Comercio
+                            </button>
+                        </form>
+                        <hr class="my-4">
+                        <div class="text-center">
+                            <p>¿Ya tienes cuenta? <a href="/auth/login">Inicia Sesión</a></p>
+                            <p>¿Eres cliente o delivery? <a href="/auth/register-client">Regístrate aquí</a></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{#section "scripts"}}
+<script>
+async function loadCommerceTypes() {
+    try {
+        const response = await fetch('/api/commerce-types', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            const select = document.getElementById('commerceType');
+            select.innerHTML = '<option value="">Selecciona un tipo</option>' +
+                data.data.map(t => `<option value="${t._id}">${t.name}</option>`).join('');
+        }
+    } catch (error) {
+        console.error('Error cargando tipos:', error);
+    }
+}
+loadCommerceTypes();
+
+document.getElementById('registerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const submitBtn = document.getElementById('submitBtn');
+    const spinner = document.getElementById('spinner');
+    const errorDiv = document.getElementById('errorMessage');
+    const successDiv = document.getElementById('successMessage');
+    
+    if (form.password.value !== form.confirmPassword.value) {
+        errorDiv.textContent = 'Las contraseñas no coinciden';
+        errorDiv.classList.remove('d-none');
+        return;
+    }
+    
+    submitBtn.disabled = true;
+    spinner.classList.remove('d-none');
+    errorDiv.classList.add('d-none');
+    successDiv.classList.add('d-none');
+    
+    const formData = new FormData(form);
+    
+    try {
+        const response = await fetch('/api/auth/register-commerce', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        
+        if (response.ok) {
+            successDiv.textContent = data.message || 'Registro exitoso. Revisa tu correo para activar tu cuenta.';
+            successDiv.classList.remove('d-none');
+            form.reset();
+        } else {
+            errorDiv.textContent = data.message || 'Error en el registro';
+            errorDiv.classList.remove('d-none');
+        }
+    } catch (error) {
+        errorDiv.textContent = 'Error de conexión';
+        errorDiv.classList.remove('d-none');
+    } finally {
+        submitBtn.disabled = false;
+        spinner.classList.add('d-none');
+    }
+});
+</script>
+{{/section}}
